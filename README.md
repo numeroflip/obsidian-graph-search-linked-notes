@@ -1,27 +1,27 @@
 # Graph Search: Linked Notes
 
-Extends Obsidian’s **global graph view** so filtered notes also show **outgoing linked notes** (neighbors by link depth).
+**Filtered graph views can now show linked notes**
 
-## Usage
+Obsidian’s **local graph** has a **Depth** slider—you can follow links outward from a note. The **global graph** doesn’t work that way: when you search or filter, you only see files that match, not the notes they link to.
 
-1. Enable the plugin in **Settings → Community plugins**.
-2. Open the **global graph** (ribbon or Mod+G).
-3. Open graph settings (gear) if the filter panel is collapsed.
-4. At the bottom of **Filters**:
-   - **Include linked notes** — show notes linked from matches (even without matching the search)
-   - **Depth** (1–3) — outgoing link hops; disabled when the toggle is off
+This plugin adds that for the global graph. Filter as you already do, then turn on **Include linked notes** and set **Depth** (1–3) to pull in linked notes alongside your matches.
 
-Both controls are disabled until you enter a **Search files** filter.
+**Example:** show your daily notes on the graph and still see what they link to—even when those linked notes don’t match the same filter.
+You can save the view as a Bookmark too.
 
-Set a **Search files** filter (e.g. `tag:#todos`), then turn on **Include linked notes** if you want neighbors shown. Matching notes always appear; linked notes up to the chosen depth appear only when the toggle is on (off by default).
+## How to use it
 
-**Empty search:** both controls are greyed out; no linked-notes expansion runs.
+1. Turn on the plugin in **Settings → Community plugins**.
+2. Open the **graph view** 
+3. Open graph settings  if the filter panel is hidden.
+4. Add a **Search** filter (for example `tag:#todos` or a path to daily notes).
+5. At the bottom of **Filters**:
+   - **Include linked notes** — show notes linked from your search results (off by default)
+   - **Depth** (1–3) — how many link hops outward; only active when the toggle is on
 
-**Local graph:** unchanged; use Obsidian’s built-in local graph depth.
+Until step 4, both controls stay disabled.
 
-**Bookmarks:** graph bookmarks store **Include linked notes** and **Depth** per bookmark (via the same options blob as filters). Missing values use plugin defaults (toggle off, depth 1). Each open graph pane keeps its own settings.
-
-**Plugin `data.json`:** `includeLinkedNotes` and `linkDepth` are **defaults only** (for new graphs and old bookmarks). Changing the toggle in the graph does not update `data.json`.
+**Bookmarks** remember **Include linked notes** and **Depth** per bookmark. **Local graph** is unchanged—use Obsidian’s built-in depth there.
 
 ## Screenshots
 
@@ -37,13 +37,13 @@ Set a **Search files** filter (e.g. `tag:#todos`), then turn on **Include linked
 
 ![](./assets/enabled_2nd_layer.png)
 
-## Known Bugs
+## Known issues
 
-When the "Existing files only" is disabled, the graph will show the non-existed links in one extra layer
+If **Existing files only** is turned off, the graph may show links to notes that don’t exist, including one extra depth.
 
-### Debug logging (bookmark race)
+### Troubleshooting: wrong toggle when opening a bookmark
 
-If a bookmark opens with the wrong toggle state, enable logging:
+If a bookmark opens with the wrong **Include linked notes** state, you can turn on debug logging:
 
 1. Open the plugin data file: **Settings → Community plugins →** your plugin folder → `data.json`
 2. Add `"debugLogging": true`
