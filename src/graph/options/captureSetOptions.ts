@@ -1,11 +1,11 @@
-import type { FglnDebugSettings } from "../debug/log";
+import type { PluginDebugSettings } from "../debug/log";
 import type { GraphDataEngine } from "../types";
 import { rememberSetOptionsPayload } from "./rememberPayload";
 
 /** Record setOptions payloads before the full bridge exists (bookmark restore vs onload race). */
 export function ensureSetOptionsCapture(
 	engine: GraphDataEngine,
-	debug?: FglnDebugSettings,
+	debug?: PluginDebugSettings,
 ): void {
 	if (engine.__linkedNotesSetOptionsCaptureInstalled) {
 		return;

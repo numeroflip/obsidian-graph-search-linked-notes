@@ -1,6 +1,6 @@
 {
-	"id": "obsidian-filtered-graph-with-linked-notes",
-	"name": "Filtered graph with linked notes",
+	"id": "graph-search-linked-notes",
+	"name": "Graph Search: Linked Notes",
 	"version": "0.1.0",
 	"minAppVersion": "1.7.2",
 	"description": "Show outgoing linked notes in the global graph when using search filters (1–3 link depth).",

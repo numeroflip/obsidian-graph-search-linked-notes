@@ -10,8 +10,8 @@ import {
 	removeLinkedNotesControls,
 } from "./controlsSection";
 import { getGraphPluginOptionsBlob } from "./debug/graphPluginOptions";
-import { fglnDebugLog } from "./debug/log";
-import { summarizeOptionsFgln, summarizeViewSettings } from "./debug/summarize";
+import { pluginDebugLog } from "./debug/log";
+import { summarizeStoredOptions, summarizeViewSettings } from "./debug/summarize";
 import { clearExpansionCache } from "./expansion";
 import { pruneLinkedExpansions } from "./fileFilter";
 import { findGraphLeaves, isGraphView } from "./leaves";
@@ -87,7 +87,7 @@ export class GraphLinkedNotesManager {
 		source: string,
 	): void {
 		ensureSetOptionsCapture(engine, this.getDefaults());
-		fglnDebugLog(this.getDefaults(), `capture-install:${source}`, {
+		pluginDebugLog(this.getDefaults(), `capture-install:${source}`, {
 			seq: engine.__linkedNotesSetOptionsSeq ?? 0,
 			bridged: !!engine.__linkedNotesOptionsBridged,
 		});
@@ -244,16 +244,16 @@ export class GraphLinkedNotesManager {
 			mode,
 		);
 
-		fglnDebugLog(this.getDefaults(), `reconcile:${source}`, {
+		pluginDebugLog(this.getDefaults(), `reconcile:${source}`, {
 			prev: summarizeViewSettings(prev),
 			next: summarizeViewSettings(next),
 			engine: summarizeViewSettings(
 				getEngineViewSettings(engine, defaults),
 			),
-			payload: summarizeOptionsFgln(
+			payload: summarizeStoredOptions(
 				engine.__linkedNotesLastSetOptionsPayload,
 			),
-			graphPlugin: summarizeOptionsFgln(
+			graphPlugin: summarizeStoredOptions(
 				getGraphPluginOptionsBlob(this.plugin.app),
 			),
 			setOptionsSeq: engine.__linkedNotesSetOptionsSeq ?? 0,
@@ -283,7 +283,7 @@ export class GraphLinkedNotesManager {
 			!prev.includeLinkedNotes && next.includeLinkedNotes;
 
 		if (opts.forceRender || turningOff || turningOn || opts.rerunSearch) {
-			fglnDebugLog(this.getDefaults(), "apply-view-settings", {
+			pluginDebugLog(this.getDefaults(), "apply-view-settings", {
 				prev: summarizeViewSettings(prev),
 				next: summarizeViewSettings(next),
 				turningOff,
@@ -378,7 +378,7 @@ export class GraphLinkedNotesManager {
 			this.ensureOptionsBridge(leaf, preView.dataEngine);
 		}
 
-		fglnDebugLog(this.getDefaults(), "tryBindLeaf:start", { attempt });
+		pluginDebugLog(this.getDefaults(), "tryBindLeaf:start", { attempt });
 
 		await leaf.loadIfDeferred();
 		if (this.destroyed) {
@@ -416,13 +416,13 @@ export class GraphLinkedNotesManager {
 		);
 		setEngineViewSettings(engine, viewSettings);
 
-		fglnDebugLog(this.getDefaults(), "tryBindLeaf:mount", {
+		pluginDebugLog(this.getDefaults(), "tryBindLeaf:mount", {
 			attempt,
 			viewSettings: summarizeViewSettings(viewSettings),
-			payload: summarizeOptionsFgln(
+			payload: summarizeStoredOptions(
 				engine.__linkedNotesLastSetOptionsPayload,
 			),
-			graphPlugin: summarizeOptionsFgln(
+			graphPlugin: summarizeStoredOptions(
 				getGraphPluginOptionsBlob(this.plugin.app),
 			),
 		});
