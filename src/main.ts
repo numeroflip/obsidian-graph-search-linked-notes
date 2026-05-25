@@ -16,13 +16,13 @@ export default class FilteredGraphLinkedNotesPlugin extends Plugin {
 		this.graphManager = new GraphLinkedNotesManager(
 			this,
 			() => this.settings,
-			(s) => this.saveSettings(s),
 		);
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => this.graphManager?.sync()),
 		);
 
+		this.graphManager.sync();
 		this.app.workspace.onLayoutReady(() => this.graphManager?.sync());
 	}
 

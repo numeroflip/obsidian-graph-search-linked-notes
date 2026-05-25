@@ -9,6 +9,20 @@ import {
 	mountLinkedNotesControls,
 	removeLinkedNotesControls,
 } from "./controls-section";
+import {
+	fglnDebugLog,
+	getGraphPluginOptionsBlob,
+	summarizeOptionsFgln,
+	summarizeViewSettings,
+} from "./debug";
+import {
+	applyLinkedNotesOptionsBridge,
+	ensureSetOptionsCapture,
+	getEngineViewSettings,
+	removeLinkedNotesOptionsBridge,
+	resolveViewSettings,
+	setEngineViewSettings,
+} from "./options-bridge";
 import { applyLinkedNotesPatch, removeLinkedNotesPatch } from "./patch";
 import {
 	clearExpansionCache,
@@ -22,8 +36,11 @@ import {
 import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
 
 const METADATA_REFRESH_DEBOUNCE_MS = 300;
+/** Delays after bind — bookmark setOptions can run after layout-change bind. */
+const POST_BIND_RECONCILE_DELAYS_MS = [0, 50, 150, 350];
 
 interface GraphLeafBinding {
+	engine: GraphDataEngine;
 	controls: LinkedNotesControlsSection;
 }
 
@@ -41,21 +58,50 @@ function settingsToPatchOptions(
 export class GraphLinkedNotesManager {
 	private readonly bindings = new Map<WorkspaceLeaf, GraphLeafBinding>();
 	private readonly bindRetryTimers = new Map<WorkspaceLeaf, number>();
+	private readonly reconcileTimers = new Map<WorkspaceLeaf, number[]>();
 	private metadataRefreshTimer: number | null = null;
 	private destroyed = false;
 
 	constructor(
 		private readonly plugin: Plugin,
-		private getSettings: () => PluginSettings,
-		private saveSettings: (settings: PluginSettings) => Promise<void>,
+		private getDefaults: () => PluginSettings,
 	) {
-		const { metadataCache } = plugin.app;
+		const { app } = plugin;
+
 		plugin.registerEvent(
-			metadataCache.on("resolved", () => this.scheduleMetadataRefresh()),
+			app.metadataCache.on("resolved", () => this.scheduleMetadataRefresh()),
 		);
 		plugin.registerEvent(
-			metadataCache.on("changed", () => this.scheduleMetadataRefresh()),
+			app.metadataCache.on("changed", () => this.scheduleMetadataRefresh()),
 		);
+		plugin.registerEvent(
+			app.workspace.on("active-leaf-change", (leaf) => {
+				if (!leaf || !isGraphView(leaf.view)) {
+					return;
+				}
+				this.captureGraphEngine(leaf.view.dataEngine, "active-leaf");
+				if (this.bindings.has(leaf)) {
+					this.reconcileLeafViewSettings(leaf, "active-leaf");
+				} else {
+					void this.tryBindLeaf(leaf);
+				}
+			}),
+		);
+	}
+
+	private debug(): PluginSettings {
+		return this.getDefaults();
+	}
+
+	private captureGraphEngine(
+		engine: GraphDataEngine,
+		source: string,
+	): void {
+		ensureSetOptionsCapture(engine, this.debug());
+		fglnDebugLog(this.debug(), `capture-install:${source}`, {
+			seq: engine.__linkedNotesSetOptionsSeq ?? 0,
+			bridged: !!engine.__linkedNotesOptionsBridged,
+		});
 	}
 
 	sync(): void {
@@ -64,6 +110,13 @@ export class GraphLinkedNotesManager {
 		}
 
 		const currentLeaves = new Set(findGraphLeaves(this.plugin.app));
+
+		for (const leaf of currentLeaves) {
+			const view = leaf.view;
+			if (isGraphView(view)) {
+				this.captureGraphEngine(view.dataEngine, "layout-sync");
+			}
+		}
 
 		for (const [leaf, binding] of this.bindings) {
 			if (!currentLeaves.has(leaf)) {
@@ -91,6 +144,13 @@ export class GraphLinkedNotesManager {
 		}
 		this.bindRetryTimers.clear();
 
+		for (const timers of this.reconcileTimers.values()) {
+			for (const timerId of timers) {
+				window.clearTimeout(timerId);
+			}
+		}
+		this.reconcileTimers.clear();
+
 		for (const [leaf, binding] of [...this.bindings]) {
 			this.unbindLeaf(leaf, binding);
 		}
@@ -117,18 +177,12 @@ export class GraphLinkedNotesManager {
 			return;
 		}
 
-		const settings = this.getSettings();
-		if (!settings.includeLinkedNotes) {
-			return;
-		}
-
-		for (const leaf of this.bindings.keys()) {
-			const view = leaf.view;
-			if (!isGraphView(view)) {
+		for (const { engine } of this.bindings.values()) {
+			const viewSettings = getEngineViewSettings(engine, this.getDefaults());
+			if (!viewSettings.includeLinkedNotes) {
 				continue;
 			}
 
-			const engine = view.dataEngine;
 			if (!hasActiveGraphSearch(engine)) {
 				continue;
 			}
@@ -151,6 +205,149 @@ export class GraphLinkedNotesManager {
 		this.bindRetryTimers.set(leaf, timerId);
 	}
 
+	private schedulePostBindReconcile(leaf: WorkspaceLeaf): void {
+		const existing = this.reconcileTimers.get(leaf);
+		if (existing) {
+			for (const timerId of existing) {
+				window.clearTimeout(timerId);
+			}
+		}
+
+		const timers: number[] = [];
+		for (const delay of POST_BIND_RECONCILE_DELAYS_MS) {
+			const timerId = window.setTimeout(() => {
+				this.reconcileTimers.set(
+					leaf,
+					(this.reconcileTimers.get(leaf) ?? []).filter((id) => id !== timerId),
+				);
+				this.reconcileLeafViewSettings(leaf, `post-bind+${delay}ms`);
+			}, delay);
+			timers.push(timerId);
+		}
+		this.reconcileTimers.set(leaf, timers);
+	}
+
+	private reconcileLeafViewSettings(leaf: WorkspaceLeaf, source: string): void {
+		if (this.destroyed) {
+			return;
+		}
+
+		const binding = this.bindings.get(leaf);
+		if (!binding) {
+			return;
+		}
+
+		const { engine, controls } = binding;
+		const defaults = this.getDefaults();
+		const prev = getEngineViewSettings(engine, defaults);
+		const next = resolveViewSettings(
+			engine,
+			this.plugin.app,
+			defaults,
+		);
+
+		fglnDebugLog(this.debug(), `reconcile:${source}`, {
+			prev: summarizeViewSettings(prev),
+			next: summarizeViewSettings(next),
+			engine: summarizeViewSettings(
+				getEngineViewSettings(engine, defaults),
+			),
+			payload: summarizeOptionsFgln(
+				engine.__linkedNotesLastSetOptionsPayload,
+			),
+			graphPlugin: summarizeOptionsFgln(
+				getGraphPluginOptionsBlob(this.plugin.app),
+			),
+			setOptionsSeq: engine.__linkedNotesSetOptionsSeq ?? 0,
+		});
+
+		if (
+			prev.includeLinkedNotes === next.includeLinkedNotes &&
+			prev.linkDepth === next.linkDepth
+		) {
+			return;
+		}
+
+		setEngineViewSettings(engine, next);
+		controls.updateFromSettings(next);
+		this.applyViewSettingsToEngine(engine, prev, next, { forceRender: true });
+	}
+
+	private applyViewSettingsToEngine(
+		engine: GraphDataEngine,
+		prev: PluginSettings,
+		next: PluginSettings,
+		opts: { rerunSearch?: boolean; forceRender?: boolean } = {},
+	): void {
+		const turningOff =
+			prev.includeLinkedNotes && !next.includeLinkedNotes;
+		const turningOn =
+			!prev.includeLinkedNotes && next.includeLinkedNotes;
+
+		if (opts.forceRender || turningOff || turningOn || opts.rerunSearch) {
+			fglnDebugLog(this.debug(), "apply-view-settings", {
+				prev: summarizeViewSettings(prev),
+				next: summarizeViewSettings(next),
+				turningOff,
+				turningOn,
+				forceRender: !!opts.forceRender,
+				rerunSearch: !!opts.rerunSearch,
+			});
+		}
+
+		if (turningOff) {
+			const seeds = engine.__linkedNotesSeedPaths;
+			if (seeds) {
+				pruneLinkedExpansions(engine, seeds);
+			}
+			clearSearchSeedCache(engine);
+			engine.render();
+			return;
+		}
+
+		if (!opts.forceRender && !turningOn && !opts.rerunSearch) {
+			if (!next.includeLinkedNotes || !hasActiveGraphSearch(engine)) {
+				return;
+			}
+		}
+
+		if (turningOn) {
+			clearSearchSeedCache(engine);
+			if (isSearchScanPending(engine)) {
+				engine.updateSearch();
+			} else {
+				engine.render();
+			}
+			return;
+		}
+
+		if (opts.rerunSearch) {
+			clearSearchSeedCache(engine);
+			engine.updateSearch();
+			return;
+		}
+
+		if (!hasActiveGraphSearch(engine)) {
+			return;
+		}
+
+		clearExpansionCache(engine);
+		engine.render();
+	}
+
+	private onViewSettingsRestored(
+		leaf: WorkspaceLeaf,
+		engine: GraphDataEngine,
+		next: PluginSettings,
+		prev: PluginSettings,
+	): void {
+		const binding = this.bindings.get(leaf);
+		if (binding?.engine === engine) {
+			binding.controls.updateFromSettings(next);
+		}
+		this.applyViewSettingsToEngine(engine, prev, next);
+	}
+
 	private cleanupGraphLeaf(leaf: WorkspaceLeaf): void {
 		const view = leaf.view;
 		if (!isGraphView(view)) {
@@ -160,6 +357,17 @@ export class GraphLinkedNotesManager {
 		const engine = view.dataEngine;
 		removeLinkedNotesControls(engine);
 		removeLinkedNotesPatch(engine);
+		removeLinkedNotesOptionsBridge(engine);
+	}
+
+	private ensureOptionsBridge(leaf: WorkspaceLeaf, engine: GraphDataEngine): void {
+		this.captureGraphEngine(engine, "ensure-bridge");
+		applyLinkedNotesOptionsBridge(
+			engine,
+			() => this.getDefaults(),
+			(next, prev) => this.onViewSettingsRestored(leaf, engine, next, prev),
+			this.debug(),
+		);
 	}
 
 	private async tryBindLeaf(leaf: WorkspaceLeaf, attempt = 0): Promise<void> {
@@ -167,10 +375,18 @@ export class GraphLinkedNotesManager {
 			return;
 		}
 
+		const preView = leaf.view;
+		if (isGraphView(preView)) {
+			this.ensureOptionsBridge(leaf, preView.dataEngine);
+		}
+
+		fglnDebugLog(this.debug(), "tryBindLeaf:start", { attempt });
+
 		await leaf.loadIfDeferred();
 		if (this.destroyed) {
 			return;
 		}
+
 		const view = leaf.view;
 		if (!isGraphView(view)) {
 			if (attempt < 10) {
@@ -182,6 +398,8 @@ export class GraphLinkedNotesManager {
 		if (this.bindings.has(leaf)) return;
 
 		const engine = view.dataEngine;
+		this.ensureOptionsBridge(leaf, engine);
+
 		if (!engine.controlsEl?.isConnected) {
 			if (attempt < 10) {
 				this.scheduleBindRetry(leaf, attempt);
@@ -189,11 +407,32 @@ export class GraphLinkedNotesManager {
 			return;
 		}
 
-		const settings = this.getSettings();
+		const defaults = this.getDefaults();
+		const viewSettings = resolveViewSettings(
+			engine,
+			this.plugin.app,
+			defaults,
+		);
+		setEngineViewSettings(engine, viewSettings);
 
-		const controls = mountLinkedNotesControls(engine, settings, (next, rerunSearch) => {
-			this.onControlsChanged(leaf, next, rerunSearch);
+		fglnDebugLog(this.debug(), "tryBindLeaf:mount", {
+			attempt,
+			viewSettings: summarizeViewSettings(viewSettings),
+			payload: summarizeOptionsFgln(
+				engine.__linkedNotesLastSetOptionsPayload,
+			),
+			graphPlugin: summarizeOptionsFgln(
+				getGraphPluginOptionsBlob(this.plugin.app),
+			),
 		});
+
+		const controls = mountLinkedNotesControls(
+			engine,
+			viewSettings,
+			(next, rerunSearch) => {
+				this.onControlsChanged(leaf, next, rerunSearch);
+			},
+		);
 
 		if (!controls) {
 			if (attempt < 10) {
@@ -207,15 +446,23 @@ export class GraphLinkedNotesManager {
 			return;
 		}
 
-		this.bindings.set(leaf, { controls });
+		this.bindings.set(leaf, { engine, controls });
 
 		applyLinkedNotesPatch(this.plugin, engine, () =>
-			settingsToPatchOptions(this.getSettings(), engine),
+			settingsToPatchOptions(
+				getEngineViewSettings(engine, this.getDefaults()),
+				engine,
+			),
 		);
 
-		if (hasActiveGraphSearch(engine)) {
-			engine.render();
-		}
+		this.applyViewSettingsToEngine(
+			engine,
+			viewSettings,
+			viewSettings,
+			{ forceRender: true },
+		);
+
+		this.schedulePostBindReconcile(leaf);
 	}
 
 	private onControlsChanged(
@@ -227,65 +474,19 @@ export class GraphLinkedNotesManager {
 			return;
 		}
 
-		if (!this.bindings.has(sourceLeaf)) {
+		const binding = this.bindings.get(sourceLeaf);
+		if (!binding) {
 			return;
 		}
 
-		const prev = this.getSettings();
+		const engine = binding.engine;
+		const prev = getEngineViewSettings(engine, this.getDefaults());
 		const next: PluginSettings = {
 			includeLinkedNotes: state.includeLinkedNotes,
 			linkDepth: clampLinkDepth(state.linkDepth),
 		};
-		const turningOff =
-			prev.includeLinkedNotes && !next.includeLinkedNotes;
-		const turningOn =
-			!prev.includeLinkedNotes && next.includeLinkedNotes;
-
-		void this.saveSettings(next);
-
-		for (const [leaf, binding] of this.bindings) {
-			if (leaf !== sourceLeaf) {
-				binding.controls.updateFromSettings(next);
-			}
-		}
-
-		for (const leaf of this.bindings.keys()) {
-			const view = leaf.view;
-			if (!isGraphView(view)) {
-				continue;
-			}
-
-			const engine = view.dataEngine;
-
-			if (turningOff) {
-				const seeds = engine.__linkedNotesSeedPaths;
-				if (seeds) {
-					pruneLinkedExpansions(engine, seeds);
-				}
-				clearSearchSeedCache(engine);
-				engine.render();
-				continue;
-			}
-
-			if (turningOn) {
-				clearSearchSeedCache(engine);
-				if (isSearchScanPending(engine)) {
-					engine.updateSearch();
-				} else {
-					engine.render();
-				}
-				continue;
-			}
-
-			if (rerunSearch) {
-				clearSearchSeedCache(engine);
-				engine.updateSearch();
-				continue;
-			}
-
-			clearExpansionCache(engine);
-			engine.render();
-		}
+		setEngineViewSettings(engine, next);
+		this.applyViewSettingsToEngine(engine, prev, next, { rerunSearch });
 	}
 
 	private unbindLeaf(leaf: WorkspaceLeaf, binding: GraphLeafBinding): void {
@@ -293,6 +494,14 @@ export class GraphLinkedNotesManager {
 		if (retry != null) {
 			window.clearTimeout(retry);
 			this.bindRetryTimers.delete(leaf);
+		}
+
+		const reconcile = this.reconcileTimers.get(leaf);
+		if (reconcile) {
+			for (const timerId of reconcile) {
+				window.clearTimeout(timerId);
+			}
+			this.reconcileTimers.delete(leaf);
 		}
 
 		binding.controls.destroy();

@@ -100,7 +100,7 @@ export class LinkedNotesControlsSection {
 		this.observeControlsEl();
 	}
 
-	/** Sync UI when another graph pane changed persisted settings. */
+	/** Sync UI when this pane’s options were restored (e.g. bookmark). */
 	updateFromSettings(settings: PluginSettings): void {
 		this.suppressEmit = true;
 		this.includeToggle?.setValue(settings.includeLinkedNotes);

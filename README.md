@@ -13,11 +13,22 @@ Extends Obsidian’s **global graph view** so filtered notes also show **outgoin
 
 Both controls are disabled until you enter a **Search files** filter.
 
-Set a **Search files** filter (e.g. `tag:#todos`). Matching notes appear, plus linked notes up to the chosen depth when the toggle is on.
+Set a **Search files** filter (e.g. `tag:#todos`), then turn on **Include linked notes** if you want neighbors shown. Matching notes always appear; linked notes up to the chosen depth appear only when the toggle is on (off by default).
 
 **Empty search:** both controls are greyed out; no linked-notes expansion runs.
 
 **Local graph:** unchanged; use Obsidian’s built-in local graph depth.
+
+**Bookmarks:** graph bookmarks store **Include linked notes** and **Depth** per bookmark (via the same options blob as filters). Missing values use plugin defaults (toggle off, depth 1). Each open graph pane keeps its own settings.
+
+### Debug logging (bookmark race)
+
+If a bookmark opens with the wrong toggle state, enable logging:
+
+1. Open the plugin data file: **Settings → Community plugins →** your plugin folder → `data.json`
+2. Add `"debugLogging": true`
+3. Reload the plugin, reproduce the issue, then open **View → Developer tools → Console**
+4. Filter by `filtered-graph` and share the log lines (especially `setOptions-payload`, `reconcile`, `tryBindLeaf:mount`)
 
 ## Development
 

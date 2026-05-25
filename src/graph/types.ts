@@ -1,4 +1,5 @@
 import type { App } from "obsidian";
+import type { PluginSettings } from "../settings";
 
 export const GLOBAL_GRAPH_VIEW_TYPE = "graph";
 
@@ -31,6 +32,18 @@ export interface GraphDataEngine {
 	render: () => void;
 	/** Synchronous search filter rebuild (not debounced). */
 	updateSearch(): void;
+	/** Serialized with graph filters; used by bookmarks and graph plugin storage. */
+	getOptions?(): Record<string, unknown>;
+	setOptions?(options: Record<string, unknown>): void;
+	/** Per graph pane; falls back to plugin defaults when options omit fgln keys. */
+	__linkedNotesViewSettings?: PluginSettings;
+	/** Last options object passed to setOptions (bookmark restore may run before bridge). */
+	__linkedNotesLastSetOptionsPayload?: Record<string, unknown>;
+	__linkedNotesSetOptionsSeq?: number;
+	__linkedNotesSetOptionsCaptureInstalled?: boolean;
+	__linkedNotesOptionsBridged?: boolean;
+	__linkedNotesOrigGetOptions?: () => Record<string, unknown>;
+	__linkedNotesOrigSetOptions?: (options: Record<string, unknown>) => void;
 	__linkedNotesPatched?: boolean;
 	__linkedNotesOrigRender?: () => void;
 	__linkedNotesGetOptions?: () => LinkedNotesPatchOptions;
