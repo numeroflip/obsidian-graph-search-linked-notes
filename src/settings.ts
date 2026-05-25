@@ -1,11 +1,14 @@
 export interface PluginSettings {
 	includeLinkedNotes: boolean;
 	linkDepth: number;
+	/** Log bookmark/options race diagnostics to the console. */
+	debugLogging?: boolean;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-	includeLinkedNotes: true,
+	includeLinkedNotes: false,
 	linkDepth: 1,
+	debugLogging: false,
 };
 
 export const MIN_LINK_DEPTH = 1;
@@ -30,6 +33,7 @@ export function normalizePluginSettings(
 		return {
 			includeLinkedNotes: data.includeLinkedNotes,
 			linkDepth: clampLinkDepth(data.linkDepth),
+			debugLogging: data.debugLogging === true,
 		};
 	}
 
