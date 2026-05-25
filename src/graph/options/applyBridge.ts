@@ -24,10 +24,11 @@ function seedViewSettingsFromHistory(
 	if (payload && hasExplicitStoredKeys(payload)) {
 		return readViewSettingsFromOptions(payload, defaults);
 	}
-	const origGet = engine.__linkedNotesOrigGetOptions ?? engine.getOptions;
+	const origGet =
+		engine.__linkedNotesOrigGetOptions ?? engine.getOptions.bind(engine);
 	if (typeof origGet === "function") {
 		return readViewSettingsFromOptions(
-			origGet.call(engine) as Record<string, unknown>,
+			origGet.call(engine),
 			defaults,
 		);
 	}
@@ -65,7 +66,7 @@ export function applyLinkedNotesOptionsBridge(
 	engine.__linkedNotesOptionsBridged = true;
 
 	engine.getOptions = function patchedGetOptions(this: GraphDataEngine) {
-		const options = origGet.call(this) as Record<string, unknown>;
+		const options = origGet.call(this);
 		writeViewSettingsToOptions(
 			options,
 			getEngineViewSettings(this, getDefaults()),

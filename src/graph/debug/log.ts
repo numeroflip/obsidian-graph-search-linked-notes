@@ -14,8 +14,8 @@ export function pluginDebugLog(
 	}
 	const time = new Date().toISOString().slice(11, 23);
 	if (data === undefined) {
-		console.log(`${LOG_PREFIX} ${time} ${event}`);
+		console.debug(`${LOG_PREFIX} ${time} ${event}`);
 		return;
 	}
-	console.log(`${LOG_PREFIX} ${time} ${event}`, data);
+	console.debug(`${LOG_PREFIX} ${time} ${event}`, data);
 }

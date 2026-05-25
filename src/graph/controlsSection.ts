@@ -201,7 +201,7 @@ export class LinkedNotesControlsSection {
 			this.includeSetting?.setTooltip(
 				"Show notes linked from filter matches, even if they do not match the search",
 			);
-			this.depthSetting?.setTooltip("Turn on Include linked notes to set depth");
+			this.depthSetting?.setTooltip("Turn on include linked notes to set depth");
 		} else {
 			const d = this.depthSlider?.getValue() ?? 1;
 			this.includeSetting?.setTooltip(

@@ -22,7 +22,7 @@ export function getGraphPluginOptionsBlob(
 		typeof root.options === "object" &&
 		!Array.isArray(root.options)
 	) {
-		return root.options as Record<string, unknown>;
+		return root.options;
 	}
 	return root;
 }

@@ -1,5 +1,5 @@
 import type { Plugin } from "obsidian";
-import { clearExpansionCache, getCachedExpansion } from "./expansion";
+import { getCachedExpansion } from "./expansion";
 import {
 	mergeExpandedIntoFileFilter,
 	pruneAllLinkedExpansions,

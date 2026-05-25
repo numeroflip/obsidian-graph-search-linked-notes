@@ -29,7 +29,6 @@ describe("getCachedExpansion", () => {
 	});
 
 	it("prunes prior linked nodes before clearing cache (depth decrease)", () => {
-		const app = createMockApp(LINKS);
 		const engine = createMockEngine({
 			fileFilter: { "seed.md": true, "hop1.md": true, "hop2.md": true },
 			__linkedNotesSeedPaths: new Set(["seed.md"]),
