@@ -1,4 +1,5 @@
 import type { App } from "obsidian";
+import { pruneAllLinkedExpansions } from "./fileFilter";
 import { getSearchQuery } from "./searchState";
 import type { GraphDataEngine } from "./types";
 
@@ -39,6 +40,7 @@ function expandOutgoing(
 }
 
 export function clearExpansionCache(engine: GraphDataEngine): void {
+	pruneAllLinkedExpansions(engine);
 	delete engine.__linkedNotesExpansionKey;
 	delete engine.__linkedNotesExpanded;
 	delete engine.__linkedNotesAddedPaths;

@@ -12,6 +12,11 @@ const LINKS = {
 	"match.md": { "linked.md": 1 },
 };
 
+const DEPTH_LINKS = {
+	"match.md": { "hop1.md": 1 },
+	"hop1.md": { "hop2.md": 1 },
+};
+
 describe("applyLinkedNotesPatch", () => {
 	it("does not expand when search is empty", () => {
 		const origRender = vi.fn();
@@ -51,6 +56,34 @@ describe("applyLinkedNotesPatch", () => {
 
 		expect(engine.fileFilter["linked.md"]).toBeUndefined();
 		expect(origRender).toHaveBeenCalledTimes(1);
+	});
+
+	it("drops nodes beyond depth when depth decreases", () => {
+		const origRender = vi.fn();
+		const engine = withSearch(
+			createMockEngine({
+				render: origRender,
+				fileFilter: { "match.md": true, "hop1.md": true, "hop2.md": true },
+				__linkedNotesSeedPaths: new Set(["match.md"]),
+				__linkedNotesExpanded: new Set(["match.md", "hop1.md", "hop2.md"]),
+				__linkedNotesAddedPaths: new Set(["hop2.md"]),
+			}),
+			"tag:#x",
+		);
+		const plugin = createMockPlugin(createMockApp(DEPTH_LINKS));
+		let depth = 2;
+
+		applyLinkedNotesPatch(plugin, engine, () => ({
+			enabled: true,
+			depth,
+		}));
+		engine.render();
+		expect(engine.fileFilter["hop2.md"]).toBe(true);
+
+		depth = 1;
+		engine.render();
+		expect(engine.fileFilter["hop1.md"]).toBe(true);
+		expect(engine.fileFilter["hop2.md"]).toBeUndefined();
 	});
 
 	it("merges outgoing linked notes when search is active and expansion enabled", () => {

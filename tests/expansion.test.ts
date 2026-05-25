@@ -28,6 +28,22 @@ describe("getCachedExpansion", () => {
 		);
 	});
 
+	it("prunes prior linked nodes before clearing cache (depth decrease)", () => {
+		const app = createMockApp(LINKS);
+		const engine = createMockEngine({
+			fileFilter: { "seed.md": true, "hop1.md": true, "hop2.md": true },
+			__linkedNotesSeedPaths: new Set(["seed.md"]),
+			__linkedNotesExpanded: new Set(["seed.md", "hop1.md", "hop2.md"]),
+			__linkedNotesAddedPaths: new Set(["hop2.md"]),
+		});
+
+		clearExpansionCache(engine);
+
+		expect(engine.fileFilter["seed.md"]).toBe(true);
+		expect(engine.fileFilter["hop1.md"]).toBeUndefined();
+		expect(engine.fileFilter["hop2.md"]).toBeUndefined();
+	});
+
 	it("reuses cache until search, depth, or seeds change", () => {
 		const app = createMockApp(LINKS);
 		const engine = createMockEngine();
