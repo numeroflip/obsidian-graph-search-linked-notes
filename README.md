@@ -23,6 +23,24 @@ Set a **Search files** filter (e.g. `tag:#todos`), then turn on **Include linked
 
 **Plugin `data.json`:** `includeLinkedNotes` and `linkDepth` are **defaults only** (for new graphs and old bookmarks). Changing the toggle in the graph does not update `data.json`.
 
+## Screenshots
+
+### Disabled
+
+![](./assets/disabled.png)
+
+### Enabled
+
+![](./assets/enabled.png)
+
+### Depth: 2
+
+![](./assets/enabled_2nd_layer.png)
+
+## Known Bugs
+
+When the "Existing files only" is disabled, the graph will show the non-existed links in one extra layer
+
 ### Debug logging (bookmark race)
 
 If a bookmark opens with the wrong toggle state, enable logging:

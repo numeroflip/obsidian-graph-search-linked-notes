@@ -16,6 +16,26 @@ export function pruneExpandedPaths(
 }
 
 /**
+ * Remove every linked-note path merged into fileFilter, not only the last batch.
+ * Uses the cached BFS result when available so depth decreases fully shrink the graph.
+ */
+export function pruneAllLinkedExpansions(engine: GraphDataEngine): void {
+	const expanded = engine.__linkedNotesExpanded;
+	const seeds = engine.__linkedNotesSeedPaths;
+	if (expanded && seeds) {
+		const linkedOnly = new Set<string>();
+		for (const path of expanded) {
+			if (!seeds.has(path)) {
+				linkedOnly.add(path);
+			}
+		}
+		pruneExpandedPaths(engine, linkedOnly);
+		return;
+	}
+	pruneExpandedPaths(engine, engine.__linkedNotesAddedPaths);
+}
+
+/**
  * Legacy prune by seed complement. Only safe when seeds match the current search;
  * prefer {@link pruneExpandedPaths} when expansion cache is available.
  */

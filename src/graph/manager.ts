@@ -13,7 +13,7 @@ import { getGraphPluginOptionsBlob } from "./debug/graphPluginOptions";
 import { pluginDebugLog } from "./debug/log";
 import { summarizeStoredOptions, summarizeViewSettings } from "./debug/summarize";
 import { clearExpansionCache } from "./expansion";
-import { pruneExpandedPaths } from "./fileFilter";
+import { pruneAllLinkedExpansions } from "./fileFilter";
 import { findGraphLeaves, isGraphView } from "./leaves";
 import { applyLinkedNotesOptionsBridge } from "./options/applyBridge";
 import { ensureSetOptionsCapture } from "./options/captureSetOptions";
@@ -266,7 +266,7 @@ export class GraphLinkedNotesManager {
 		}
 
 		if (turningOff) {
-			pruneExpandedPaths(engine, engine.__linkedNotesAddedPaths);
+			pruneAllLinkedExpansions(engine);
 			clearSearchSeedCache(engine);
 			engine.render();
 			return;
