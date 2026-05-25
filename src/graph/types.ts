@@ -1,5 +1,5 @@
 import type { App } from "obsidian";
-import type { PluginSettings } from "../settings";
+import type { ViewSettings } from "../settings";
 
 export const GLOBAL_GRAPH_VIEW_TYPE = "graph";
 
@@ -36,7 +36,7 @@ export interface GraphDataEngine {
 	getOptions?(): Record<string, unknown>;
 	setOptions?(options: Record<string, unknown>): void;
 	/** Per graph pane; falls back to plugin defaults when options omit fgln keys. */
-	__linkedNotesViewSettings?: PluginSettings;
+	__linkedNotesViewSettings?: ViewSettings;
 	/** Last options object passed to setOptions (bookmark restore may run before bridge). */
 	__linkedNotesLastSetOptionsPayload?: Record<string, unknown>;
 	__linkedNotesSetOptionsSeq?: number;

@@ -7,6 +7,7 @@ import {
 } from "./settings";
 
 export default class FilteredGraphLinkedNotesPlugin extends Plugin {
+	/** Defaults for new graphs and bookmarks without fgln keys. */
 	settings: PluginSettings = { ...DEFAULT_SETTINGS };
 	private graphManager: GraphLinkedNotesManager | null = null;
 
@@ -36,10 +37,5 @@ export default class FilteredGraphLinkedNotesPlugin extends Plugin {
 			typeof normalizePluginSettings
 		>[0];
 		this.settings = normalizePluginSettings(data);
-	}
-
-	async saveSettings(settings: PluginSettings = this.settings) {
-		this.settings = settings;
-		await this.saveData(this.settings);
 	}
 }

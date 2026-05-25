@@ -21,6 +21,8 @@ Set a **Search files** filter (e.g. `tag:#todos`), then turn on **Include linked
 
 **Bookmarks:** graph bookmarks store **Include linked notes** and **Depth** per bookmark (via the same options blob as filters). Missing values use plugin defaults (toggle off, depth 1). Each open graph pane keeps its own settings.
 
+**Plugin `data.json`:** `includeLinkedNotes` and `linkDepth` are **defaults only** (for new graphs and old bookmarks). Changing the toggle in the graph does not update `data.json`.
+
 ### Debug logging (bookmark race)
 
 If a bookmark opens with the wrong toggle state, enable logging:

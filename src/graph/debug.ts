@@ -1,5 +1,5 @@
 import type { App } from "obsidian";
-import type { PluginSettings } from "../settings";
+import type { PluginSettings, ViewSettings } from "../settings";
 
 const LOG_PREFIX = "[filtered-graph]";
 
@@ -23,7 +23,7 @@ export function fglnDebugLog(
 	console.log(`${LOG_PREFIX} ${time} ${event}`, data);
 }
 
-export function summarizeViewSettings(settings: PluginSettings): string {
+export function summarizeViewSettings(settings: ViewSettings): string {
 	return `include=${settings.includeLinkedNotes} depth=${settings.linkDepth}`;
 }
 

@@ -3,7 +3,7 @@ import {
 	clampLinkDepth,
 	MAX_LINK_DEPTH,
 	MIN_LINK_DEPTH,
-	type PluginSettings,
+	type ViewSettings,
 } from "../settings";
 import type { GraphDataEngine } from "./types";
 import { getGraphSearchInput, hasActiveGraphSearch } from "./utils";
@@ -17,11 +17,6 @@ const FGLN_DEPTH_OFF = `${FGLN_DEPTH}--off`;
 
 const FGLN_CONTROL_CLASSES = [FGLN_TOGGLE, FGLN_DEPTH].join(", ");
 const SEARCH_DEBOUNCE_MS = 300;
-
-export interface LinkedNotesControlState {
-	includeLinkedNotes: boolean;
-	linkDepth: number;
-}
 
 function findFilterSettingsContainer(controlsEl: HTMLElement): HTMLElement | null {
 	return controlsEl.querySelector(
@@ -54,9 +49,9 @@ export class LinkedNotesControlsSection {
 	constructor(
 		mountEl: HTMLElement,
 		engine: GraphDataEngine,
-		initial: PluginSettings,
+		initial: ViewSettings,
 		private readonly onChange: (
-			state: LinkedNotesControlState,
+			state: ViewSettings,
 			rerunSearch?: boolean,
 		) => void,
 	) {
@@ -101,7 +96,7 @@ export class LinkedNotesControlsSection {
 	}
 
 	/** Sync UI when this pane’s options were restored (e.g. bookmark). */
-	updateFromSettings(settings: PluginSettings): void {
+	updateFromSettings(settings: ViewSettings): void {
 		this.suppressEmit = true;
 		this.includeToggle?.setValue(settings.includeLinkedNotes);
 		this.depthSlider?.setValue(clampLinkDepth(settings.linkDepth));
@@ -142,7 +137,7 @@ export class LinkedNotesControlsSection {
 		});
 	}
 
-	private getState(): LinkedNotesControlState {
+	private getState(): ViewSettings {
 		return {
 			includeLinkedNotes: this.includeToggle?.getValue() ?? false,
 			linkDepth: clampLinkDepth(this.depthSlider?.getValue() ?? 1),
@@ -260,8 +255,8 @@ export function removeLinkedNotesControls(engine: GraphDataEngine): void {
 /** Append controls at the end of the native Filters list. */
 export function mountLinkedNotesControls(
 	engine: GraphDataEngine,
-	initial: PluginSettings,
-	onChange: (state: LinkedNotesControlState, rerunSearch?: boolean) => void,
+	initial: ViewSettings,
+	onChange: (state: ViewSettings, rerunSearch?: boolean) => void,
 ): LinkedNotesControlsSection | null {
 	const mountEl = findFilterSettingsContainer(engine.controlsEl);
 	if (!mountEl) {
