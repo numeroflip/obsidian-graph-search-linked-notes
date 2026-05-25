@@ -1,4 +1,4 @@
-# Filtered graph with linked notes
+# Graph Search: Linked Notes
 
 Extends Obsidian’s **global graph view** so filtered notes also show **outgoing linked notes** (neighbors by link depth).
 
@@ -30,7 +30,7 @@ If a bookmark opens with the wrong toggle state, enable logging:
 1. Open the plugin data file: **Settings → Community plugins →** your plugin folder → `data.json`
 2. Add `"debugLogging": true`
 3. Reload the plugin, reproduce the issue, then open **View → Developer tools → Console**
-4. Filter by `filtered-graph` and share the log lines (especially `setOptions-payload`, `reconcile`, `tryBindLeaf:mount`)
+4. Filter by `graph-search-linked-notes` and share the log lines (especially `setOptions-payload`, `reconcile`, `tryBindLeaf:mount`)
 
 ## Development
 
@@ -39,4 +39,4 @@ npm install
 npm run dev
 ```
 
-Reload the plugin after building. See [SPIKE.md](./SPIKE.md) for internal API notes.
+Reload the plugin after building.

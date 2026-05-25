@@ -6,8 +6,8 @@ import {
 	type PluginSettings,
 } from "./settings";
 
-export default class FilteredGraphLinkedNotesPlugin extends Plugin {
-	/** Defaults for new graphs and bookmarks without fgln keys. */
+export default class GraphSearchLinkedNotesPlugin extends Plugin {
+	/** Defaults for new graphs and bookmarks without stored plugin keys. */
 	settings: PluginSettings = { ...DEFAULT_SETTINGS };
 	private graphManager: GraphLinkedNotesManager | null = null;
 

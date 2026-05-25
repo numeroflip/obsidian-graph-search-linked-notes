@@ -9,14 +9,14 @@ import type { GraphDataEngine } from "./types";
 import { getGraphSearchInput } from "./searchInput";
 import { hasActiveGraphSearch } from "./searchState";
 
-/** BEM class names — block: fgln (filtered graph linked notes) */
-const FGLN_BLOCK = "fgln";
-const FGLN_TOGGLE = `${FGLN_BLOCK}__toggle`;
-const FGLN_DEPTH = `${FGLN_BLOCK}__depth`;
-const FGLN_DEPTH_SLIDER = `${FGLN_BLOCK}__depth-slider`;
-const FGLN_DEPTH_OFF = `${FGLN_DEPTH}--off`;
+/** BEM class names for graph filter controls (styles.css). */
+const PLUGIN_BLOCK = "plugin";
+const PLUGIN_TOGGLE = `${PLUGIN_BLOCK}__toggle`;
+const PLUGIN_DEPTH = `${PLUGIN_BLOCK}__depth`;
+const PLUGIN_DEPTH_SLIDER = `${PLUGIN_BLOCK}__depth-slider`;
+const PLUGIN_DEPTH_OFF = `${PLUGIN_DEPTH}--off`;
 
-const FGLN_CONTROL_CLASSES = [FGLN_TOGGLE, FGLN_DEPTH].join(", ");
+const PLUGIN_CONTROL_CLASSES = [PLUGIN_TOGGLE, PLUGIN_DEPTH].join(", ");
 const SEARCH_DEBOUNCE_MS = 300;
 
 function findFilterSettingsContainer(controlsEl: HTMLElement): HTMLElement | null {
@@ -74,7 +74,7 @@ export class LinkedNotesControlsSection {
 					});
 				this.includeToggle = toggle;
 			});
-		this.includeSetting.settingEl.addClass(FGLN_TOGGLE);
+		this.includeSetting.settingEl.addClass(PLUGIN_TOGGLE);
 
 		this.depthSetting = new Setting(mountEl)
 			.setName("Depth")
@@ -86,10 +86,10 @@ export class LinkedNotesControlsSection {
 					.setDynamicTooltip()
 					.setInstant(true)
 					.onChange(() => this.emitChange());
-				slider.sliderEl.addClass(FGLN_DEPTH_SLIDER);
+				slider.sliderEl.addClass(PLUGIN_DEPTH_SLIDER);
 				this.depthSlider = slider;
 			});
-		this.depthSetting.settingEl.addClass(FGLN_DEPTH);
+		this.depthSetting.settingEl.addClass(PLUGIN_DEPTH);
 
 		this.bindSearchInput();
 		this.syncDisabled();
@@ -207,7 +207,7 @@ export class LinkedNotesControlsSection {
 		this.depthSetting?.setDisabled(depthDisabled);
 		this.depthSetting?.settingEl.toggleClass("is-disabled", depthDisabled);
 		this.depthSetting?.settingEl.toggleClass(
-			FGLN_DEPTH_OFF,
+			PLUGIN_DEPTH_OFF,
 			!noSearch && depthOff,
 		);
 
@@ -249,7 +249,7 @@ export function removeLinkedNotesControls(engine: GraphDataEngine): void {
 		return;
 	}
 	mountEl
-		.querySelectorAll(FGLN_CONTROL_CLASSES)
+		.querySelectorAll(PLUGIN_CONTROL_CLASSES)
 		.forEach((el) => el.remove());
 }
 
@@ -262,13 +262,13 @@ export function mountLinkedNotesControls(
 	const mountEl = findFilterSettingsContainer(engine.controlsEl);
 	if (!mountEl) {
 		console.warn(
-			"[filtered-graph] Could not find .mod-filter .tree-item-children",
+			"[graph-search-linked-notes] Could not find .mod-filter .tree-item-children",
 		);
 		return null;
 	}
 
 	mountEl
-		.querySelectorAll(FGLN_CONTROL_CLASSES)
+		.querySelectorAll(PLUGIN_CONTROL_CLASSES)
 		.forEach((el) => el.remove());
 
 	return new LinkedNotesControlsSection(mountEl, engine, initial, onChange);

@@ -1,11 +1,11 @@
 import type { PluginSettings } from "../../settings";
 
-const LOG_PREFIX = "[filtered-graph]";
+const LOG_PREFIX = "[graph-search-linked-notes]";
 
-export type FglnDebugSettings = Pick<PluginSettings, "debugLogging">;
+export type PluginDebugSettings = Pick<PluginSettings, "debugLogging">;
 
-export function fglnDebugLog(
-	settings: FglnDebugSettings,
+export function pluginDebugLog(
+	settings: PluginDebugSettings,
 	event: string,
 	data?: Record<string, unknown>,
 ): void {

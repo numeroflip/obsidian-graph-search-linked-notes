@@ -3,7 +3,7 @@ import type { PluginSettings, ViewSettings } from "../../settings";
 import { getGraphPluginOptionsBlob } from "../debug/graphPluginOptions";
 import type { GraphDataEngine } from "../types";
 import { getEngineViewSettings } from "./engineSettings";
-import { hasExplicitFglnKeys, readViewSettingsFromOptions } from "./readFromOptions";
+import { hasExplicitStoredKeys, readViewSettingsFromOptions } from "./readFromOptions";
 
 /**
  * How to merge engine memory, last setOptions payload, and graph plugin store.
@@ -21,12 +21,12 @@ export function resolveViewSettings(
 	const fromEngine = getEngineViewSettings(engine, defaults);
 	const payload = engine.__linkedNotesLastSetOptionsPayload;
 	const fromPayload =
-		payload && hasExplicitFglnKeys(payload)
+		payload && hasExplicitStoredKeys(payload)
 			? readViewSettingsFromOptions(payload, defaults)
 			: null;
 	const graphBlob = getGraphPluginOptionsBlob(app);
 	const fromGraphPlugin =
-		graphBlob && hasExplicitFglnKeys(graphBlob)
+		graphBlob && hasExplicitStoredKeys(graphBlob)
 			? readViewSettingsFromOptions(graphBlob, defaults)
 			: null;
 

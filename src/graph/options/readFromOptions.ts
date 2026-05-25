@@ -1,15 +1,15 @@
 import { clampLinkDepth, type PluginSettings, type ViewSettings } from "../../settings";
-import { FGLN_DEPTH_KEY, FGLN_INCLUDE_KEY } from "./keys";
+import { GRAPH_SEARCH_DEPTH_KEY, GRAPH_SEARCH_INCLUDE_KEY } from "./keys";
 
-export function hasExplicitFglnKeys(
+export function hasExplicitStoredKeys(
 	options: Record<string, unknown> | null | undefined,
 ): boolean {
 	if (!options) {
 		return false;
 	}
 	return (
-		typeof options[FGLN_INCLUDE_KEY] === "boolean" ||
-		typeof options[FGLN_DEPTH_KEY] === "number"
+		typeof options[GRAPH_SEARCH_INCLUDE_KEY] === "boolean" ||
+		typeof options[GRAPH_SEARCH_DEPTH_KEY] === "number"
 	);
 }
 
@@ -21,8 +21,8 @@ export function readViewSettingsFromOptions(
 		return { ...defaults };
 	}
 
-	const include = options[FGLN_INCLUDE_KEY];
-	const depth = options[FGLN_DEPTH_KEY];
+	const include = options[GRAPH_SEARCH_INCLUDE_KEY];
+	const depth = options[GRAPH_SEARCH_DEPTH_KEY];
 	const hasInclude = typeof include === "boolean";
 	const hasDepth = typeof depth === "number";
 
@@ -44,6 +44,6 @@ export function writeViewSettingsToOptions(
 	options: Record<string, unknown>,
 	settings: ViewSettings,
 ): void {
-	options[FGLN_INCLUDE_KEY] = settings.includeLinkedNotes;
-	options[FGLN_DEPTH_KEY] = clampLinkDepth(settings.linkDepth);
+	options[GRAPH_SEARCH_INCLUDE_KEY] = settings.includeLinkedNotes;
+	options[GRAPH_SEARCH_DEPTH_KEY] = clampLinkDepth(settings.linkDepth);
 }

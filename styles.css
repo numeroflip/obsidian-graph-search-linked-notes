@@ -1,29 +1,29 @@
-/* Block: fgln — filtered graph linked notes */
+/* Graph Search: Linked Notes — graph filter controls */
 
 /* No search — toggle and depth inactive (Obsidian is-disabled) */
-.setting-item.fgln__toggle.is-disabled,
-.setting-item.fgln__depth.is-disabled {
+.setting-item.plugin__toggle.is-disabled,
+.setting-item.plugin__depth.is-disabled {
 	opacity: 0.45;
 	pointer-events: none;
 }
 
-.setting-item.fgln__toggle.is-disabled .setting-item-name,
-.setting-item.fgln__depth.is-disabled .setting-item-name {
+.setting-item.plugin__toggle.is-disabled .setting-item-name,
+.setting-item.plugin__depth.is-disabled .setting-item-name {
 	color: var(--text-muted);
 }
 
 /* Toggle off — depth slider inactive */
-.setting-item.fgln__depth.fgln__depth--off {
+.setting-item.plugin__depth.plugin__depth--off {
 	opacity: 0.45;
 	pointer-events: none;
 }
 
-.setting-item.fgln__depth.fgln__depth--off .setting-item-name {
+.setting-item.plugin__depth.plugin__depth--off .setting-item-name {
 	color: var(--text-muted);
 }
 
-.setting-item.fgln__depth.fgln__depth--off .fgln__depth-slider,
-.setting-item.fgln__depth.fgln__depth--off input[type="range"] {
+.setting-item.plugin__depth.plugin__depth--off .plugin__depth-slider,
+.setting-item.plugin__depth.plugin__depth--off input[type="range"] {
 	cursor: not-allowed;
 	opacity: 0.6;
 }

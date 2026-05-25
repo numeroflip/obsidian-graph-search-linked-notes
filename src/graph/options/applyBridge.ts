@@ -1,6 +1,6 @@
 import type { PluginSettings, ViewSettings } from "../../settings";
-import { fglnDebugLog, type FglnDebugSettings } from "../debug/log";
-import { summarizeOptionsFgln, summarizeViewSettings } from "../debug/summarize";
+import { pluginDebugLog, type PluginDebugSettings } from "../debug/log";
+import { summarizeStoredOptions, summarizeViewSettings } from "../debug/summarize";
 import type { GraphDataEngine } from "../types";
 import { ensureSetOptionsCapture } from "./captureSetOptions";
 import {
@@ -8,7 +8,7 @@ import {
 	setEngineViewSettings,
 } from "./engineSettings";
 import {
-	hasExplicitFglnKeys,
+	hasExplicitStoredKeys,
 	readViewSettingsFromOptions,
 	writeViewSettingsToOptions,
 } from "./readFromOptions";
@@ -20,7 +20,7 @@ function seedViewSettingsFromHistory(
 ): ViewSettings {
 	const defaults = getDefaults();
 	const payload = engine.__linkedNotesLastSetOptionsPayload;
-	if (payload && hasExplicitFglnKeys(payload)) {
+	if (payload && hasExplicitStoredKeys(payload)) {
 		return readViewSettingsFromOptions(payload, defaults);
 	}
 	const origGet = engine.__linkedNotesOrigGetOptions ?? engine.getOptions;
@@ -37,7 +37,7 @@ export function applyLinkedNotesOptionsBridge(
 	engine: GraphDataEngine,
 	getDefaults: () => PluginSettings,
 	onViewSettingsRestored?: (next: ViewSettings, prev: ViewSettings) => void,
-	debug?: FglnDebugSettings,
+	debug?: PluginDebugSettings,
 ): void {
 	if (engine.__linkedNotesOptionsBridged) {
 		return;
@@ -49,7 +49,9 @@ export function applyLinkedNotesOptionsBridge(
 		typeof engine.getOptions !== "function" ||
 		typeof engine.setOptions !== "function"
 	) {
-		console.warn("[filtered-graph] dataEngine missing getOptions/setOptions");
+		console.warn(
+			"[graph-search-linked-notes] dataEngine missing getOptions/setOptions",
+		);
 		setEngineViewSettings(engine, getDefaults());
 		return;
 	}
@@ -81,11 +83,11 @@ export function applyLinkedNotesOptionsBridge(
 			const next = readViewSettingsFromOptions(options, defaults);
 			setEngineViewSettings(this, next);
 			if (debug?.debugLogging) {
-				fglnDebugLog(debug, "setOptions-bridge", {
+				pluginDebugLog(debug, "setOptions-bridge", {
 					seq: this.__linkedNotesSetOptionsSeq,
 					prev: summarizeViewSettings(prev),
 					next: summarizeViewSettings(next),
-					fgln: summarizeOptionsFgln(options),
+					stored: summarizeStoredOptions(options),
 				});
 			}
 			onViewSettingsRestored?.(next, prev);
@@ -97,9 +99,9 @@ export function applyLinkedNotesOptionsBridge(
 		const seeded = seedViewSettingsFromHistory(engine, getDefaults);
 		setEngineViewSettings(engine, seeded);
 		if (debug?.debugLogging) {
-			fglnDebugLog(debug, "bridge-seed", {
+			pluginDebugLog(debug, "bridge-seed", {
 				seeded: summarizeViewSettings(seeded),
-				payload: summarizeOptionsFgln(
+				payload: summarizeStoredOptions(
 					engine.__linkedNotesLastSetOptionsPayload,
 				),
 			});
