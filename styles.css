@@ -1,8 +1,29 @@
-/*
+/* Block: fgln — filtered graph linked notes */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* No search — toggle and depth inactive (Obsidian is-disabled) */
+.setting-item.fgln__toggle.is-disabled,
+.setting-item.fgln__depth.is-disabled {
+	opacity: 0.45;
+	pointer-events: none;
+}
 
-If your plugin does not need CSS, delete this file.
+.setting-item.fgln__toggle.is-disabled .setting-item-name,
+.setting-item.fgln__depth.is-disabled .setting-item-name {
+	color: var(--text-muted);
+}
 
-*/
+/* Toggle off — depth slider inactive */
+.setting-item.fgln__depth.fgln__depth--off {
+	opacity: 0.45;
+	pointer-events: none;
+}
+
+.setting-item.fgln__depth.fgln__depth--off .setting-item-name {
+	color: var(--text-muted);
+}
+
+.setting-item.fgln__depth.fgln__depth--off .fgln__depth-slider,
+.setting-item.fgln__depth.fgln__depth--off input[type="range"] {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
