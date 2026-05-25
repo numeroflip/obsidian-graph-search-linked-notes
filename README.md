@@ -37,6 +37,9 @@ If a bookmark opens with the wrong toggle state, enable logging:
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
 Reload the plugin after building.
+
+Unit tests cover link expansion, `fileFilter` merge/prune, search seeds, options resolution, the render patch, and settings normalization (no Obsidian app required).

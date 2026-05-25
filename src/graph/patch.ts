@@ -2,7 +2,7 @@ import type { Plugin } from "obsidian";
 import { clearExpansionCache, getCachedExpansion } from "./expansion";
 import {
 	mergeExpandedIntoFileFilter,
-	pruneLinkedExpansions,
+	pruneExpandedPaths,
 } from "./fileFilter";
 import { clearSearchSeedCache, refreshSearchSeedCache } from "./searchSeeds";
 import { hasActiveGraphSearch, isSearchScanPending } from "./searchState";
@@ -25,9 +25,7 @@ export function applyLinkedNotesPatch(
 
 	engine.render = function patchedRender(this: GraphDataEngine) {
 		if (!hasActiveGraphSearch(this)) {
-			if (this.__linkedNotesSeedPaths) {
-				pruneLinkedExpansions(this, this.__linkedNotesSeedPaths);
-			}
+			pruneExpandedPaths(this, this.__linkedNotesAddedPaths);
 			clearSearchSeedCache(this);
 			return origRender();
 		}
@@ -39,10 +37,7 @@ export function applyLinkedNotesPatch(
 		const { enabled, depth } =
 			this.__linkedNotesGetOptions?.() ?? { enabled: false, depth: 0 };
 
-		const seedSet = this.__linkedNotesSeedPaths;
-		if (seedSet) {
-			pruneLinkedExpansions(this, seedSet);
-		}
+		pruneExpandedPaths(this, this.__linkedNotesAddedPaths);
 
 		const seedPaths = refreshSearchSeedCache(this);
 
@@ -62,10 +57,7 @@ export function applyLinkedNotesPatch(
 }
 
 export function removeLinkedNotesPatch(engine: GraphDataEngine): void {
-	const seeds = engine.__linkedNotesSeedPaths;
-	if (seeds) {
-		pruneLinkedExpansions(engine, seeds);
-	}
+	pruneExpandedPaths(engine, engine.__linkedNotesAddedPaths);
 
 	const origRender = engine.__linkedNotesOrigRender;
 

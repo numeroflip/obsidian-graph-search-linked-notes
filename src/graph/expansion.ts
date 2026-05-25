@@ -41,6 +41,7 @@ function expandOutgoing(
 export function clearExpansionCache(engine: GraphDataEngine): void {
 	delete engine.__linkedNotesExpansionKey;
 	delete engine.__linkedNotesExpanded;
+	delete engine.__linkedNotesAddedPaths;
 }
 
 /** Reuse BFS result until search, depth, or seeds change. */

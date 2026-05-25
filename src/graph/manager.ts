@@ -13,7 +13,7 @@ import { getGraphPluginOptionsBlob } from "./debug/graphPluginOptions";
 import { pluginDebugLog } from "./debug/log";
 import { summarizeStoredOptions, summarizeViewSettings } from "./debug/summarize";
 import { clearExpansionCache } from "./expansion";
-import { pruneLinkedExpansions } from "./fileFilter";
+import { pruneExpandedPaths } from "./fileFilter";
 import { findGraphLeaves, isGraphView } from "./leaves";
 import { applyLinkedNotesOptionsBridge } from "./options/applyBridge";
 import { ensureSetOptionsCapture } from "./options/captureSetOptions";
@@ -28,9 +28,8 @@ import { clearSearchSeedCache } from "./searchSeeds";
 import { hasActiveGraphSearch, isSearchScanPending } from "./searchState";
 import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
 
+/** Coalesce vault link/metadata churn; not used for bookmark or filter UI changes. */
 const METADATA_REFRESH_DEBOUNCE_MS = 300;
-/** Bookmark setOptions may run after bind; re-read graph plugin store briefly. */
-const POST_BIND_RECONCILE_DELAYS_MS = [0, 100];
 
 interface GraphLeafBinding {
 	engine: GraphDataEngine;
@@ -51,7 +50,6 @@ function settingsToPatchOptions(
 export class GraphLinkedNotesManager {
 	private readonly bindings = new Map<WorkspaceLeaf, GraphLeafBinding>();
 	private readonly bindRetryTimers = new Map<WorkspaceLeaf, number>();
-	private readonly reconcileTimers = new Map<WorkspaceLeaf, number[]>();
 	private metadataRefreshTimer: number | null = null;
 	private destroyed = false;
 
@@ -133,17 +131,17 @@ export class GraphLinkedNotesManager {
 		}
 		this.bindRetryTimers.clear();
 
-		for (const timers of this.reconcileTimers.values()) {
-			for (const timerId of timers) {
-				window.clearTimeout(timerId);
-			}
-		}
-		this.reconcileTimers.clear();
-
 		for (const [leaf, binding] of [...this.bindings]) {
 			this.unbindLeaf(leaf, binding);
 		}
 		this.bindings.clear();
+	}
+
+	private cancelMetadataRefresh(): void {
+		if (this.metadataRefreshTimer != null) {
+			window.clearTimeout(this.metadataRefreshTimer);
+			this.metadataRefreshTimer = null;
+		}
 	}
 
 	private scheduleMetadataRefresh(): void {
@@ -192,32 +190,6 @@ export class GraphLinkedNotesManager {
 			void this.tryBindLeaf(leaf, attempt + 1);
 		}, 100);
 		this.bindRetryTimers.set(leaf, timerId);
-	}
-
-	private schedulePostBindReconcile(leaf: WorkspaceLeaf): void {
-		const existing = this.reconcileTimers.get(leaf);
-		if (existing) {
-			for (const timerId of existing) {
-				window.clearTimeout(timerId);
-			}
-		}
-
-		const timers: number[] = [];
-		for (const delay of POST_BIND_RECONCILE_DELAYS_MS) {
-			const timerId = window.setTimeout(() => {
-				this.reconcileTimers.set(
-					leaf,
-					(this.reconcileTimers.get(leaf) ?? []).filter((id) => id !== timerId),
-				);
-				this.reconcileLeafViewSettings(
-					leaf,
-					`post-bind+${delay}ms`,
-					"bookmark",
-				);
-			}, delay);
-			timers.push(timerId);
-		}
-		this.reconcileTimers.set(leaf, timers);
 	}
 
 	private reconcileLeafViewSettings(
@@ -294,10 +266,7 @@ export class GraphLinkedNotesManager {
 		}
 
 		if (turningOff) {
-			const seeds = engine.__linkedNotesSeedPaths;
-			if (seeds) {
-				pruneLinkedExpansions(engine, seeds);
-			}
+			pruneExpandedPaths(engine, engine.__linkedNotesAddedPaths);
 			clearSearchSeedCache(engine);
 			engine.render();
 			return;
@@ -339,11 +308,12 @@ export class GraphLinkedNotesManager {
 		next: ViewSettings,
 		prev: ViewSettings,
 	): void {
+		this.cancelMetadataRefresh();
 		const binding = this.bindings.get(leaf);
 		if (binding?.engine === engine) {
 			binding.controls.updateFromSettings(next);
 		}
-		this.applyViewSettingsToEngine(engine, prev, next);
+		this.applyViewSettingsToEngine(engine, prev, next, { forceRender: true });
 	}
 
 	private cleanupGraphLeaf(leaf: WorkspaceLeaf): void {
@@ -462,8 +432,6 @@ export class GraphLinkedNotesManager {
 			viewSettings,
 			{ forceRender: true },
 		);
-
-		this.schedulePostBindReconcile(leaf);
 	}
 
 	private onControlsChanged(
@@ -495,14 +463,6 @@ export class GraphLinkedNotesManager {
 		if (retry != null) {
 			window.clearTimeout(retry);
 			this.bindRetryTimers.delete(leaf);
-		}
-
-		const reconcile = this.reconcileTimers.get(leaf);
-		if (reconcile) {
-			for (const timerId of reconcile) {
-				window.clearTimeout(timerId);
-			}
-			this.reconcileTimers.delete(leaf);
 		}
 
 		binding.controls.destroy();

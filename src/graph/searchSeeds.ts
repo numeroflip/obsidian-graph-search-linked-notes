@@ -49,8 +49,13 @@ export function refreshSearchSeedCache(engine: GraphDataEngine): string[] {
 	return [...engine.__linkedNotesSeedPaths!];
 }
 
-export function clearSearchSeedCache(engine: GraphDataEngine): void {
+/** Drop stale seed/query cache only (keep added paths until pruned). */
+export function clearSearchSeedState(engine: GraphDataEngine): void {
 	delete engine.__linkedNotesSeedPaths;
 	delete engine.__linkedNotesLastSearch;
+}
+
+export function clearSearchSeedCache(engine: GraphDataEngine): void {
+	clearSearchSeedState(engine);
 	clearExpansionCache(engine);
 }

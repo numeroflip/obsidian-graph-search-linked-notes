@@ -53,6 +53,8 @@ export interface GraphDataEngine {
 	/** Cached BFS result keyed by search + depth + seeds. */
 	__linkedNotesExpansionKey?: string;
 	__linkedNotesExpanded?: Set<string>;
+	/** Paths added to fileFilter by the last expansion merge (excludes search seeds). */
+	__linkedNotesAddedPaths?: Set<string>;
 }
 
 /** Global graph view (class `kJ` in Obsidian app.js). */
