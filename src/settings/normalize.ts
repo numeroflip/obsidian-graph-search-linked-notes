@@ -1,32 +1,5 @@
-/**
- * Persisted plugin data (`data.json`).
- * `includeLinkedNotes` and `linkDepth` are defaults only — graph UI and bookmarks
- * store per-view state; toggling the graph does not write these back.
- */
-export interface PluginSettings {
-	includeLinkedNotes: boolean;
-	linkDepth: number;
-	debugLogging?: boolean;
-}
-
-/** Per graph pane / bookmark: include toggle + depth. */
-export type ViewSettings = Pick<
-	PluginSettings,
-	"includeLinkedNotes" | "linkDepth"
->;
-
-export const DEFAULT_SETTINGS: PluginSettings = {
-	includeLinkedNotes: false,
-	linkDepth: 1,
-	debugLogging: false,
-};
-
-export const MIN_LINK_DEPTH = 1;
-export const MAX_LINK_DEPTH = 3;
-
-export function clampLinkDepth(depth: number): number {
-	return Math.min(MAX_LINK_DEPTH, Math.max(MIN_LINK_DEPTH, Math.round(depth)));
-}
+import { clampLinkDepth, DEFAULT_SETTINGS } from "./defaults";
+import type { PluginSettings } from "./types";
 
 /** Migrate saved data from older single-slider shape. */
 export function normalizePluginSettings(
