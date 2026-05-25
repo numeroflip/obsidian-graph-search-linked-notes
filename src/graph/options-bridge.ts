@@ -2,6 +2,7 @@ import type { App } from "obsidian";
 import {
 	clampLinkDepth,
 	type PluginSettings,
+	type ViewSettings,
 } from "../settings";
 import {
 	fglnDebugLog,
@@ -31,7 +32,7 @@ export function hasExplicitFglnKeys(
 export function readViewSettingsFromOptions(
 	options: Record<string, unknown> | null | undefined,
 	defaults: PluginSettings,
-): PluginSettings {
+): ViewSettings {
 	if (!options) {
 		return { ...defaults };
 	}
@@ -57,7 +58,7 @@ export function readViewSettingsFromOptions(
 
 function writeViewSettingsToOptions(
 	options: Record<string, unknown>,
-	settings: PluginSettings,
+	settings: ViewSettings,
 ): void {
 	options[FGLN_INCLUDE_KEY] = settings.includeLinkedNotes;
 	options[FGLN_DEPTH_KEY] = clampLinkDepth(settings.linkDepth);
@@ -87,7 +88,7 @@ function rememberSetOptionsPayload(
 function seedViewSettingsFromHistory(
 	engine: GraphDataEngine,
 	getDefaults: () => PluginSettings,
-): PluginSettings {
+): ViewSettings {
 	const defaults = getDefaults();
 	const payload = engine.__linkedNotesLastSetOptionsPayload;
 	if (payload && hasExplicitFglnKeys(payload)) {
@@ -104,13 +105,18 @@ function seedViewSettingsFromHistory(
 }
 
 /**
- * Record setOptions payloads before the full bridge exists (bookmark restore vs onload race).
+ * How to merge engine memory, last setOptions payload, and graph plugin store.
+ * - bookmark: prefer graph plugin / payload (fixes cold-open bookmark race).
+ * - pane: prefer this engine’s settings (avoids cross-tab bleed from global graph store).
  */
+export type ResolveViewSettingsMode = "bookmark" | "pane";
+
 export function resolveViewSettings(
 	engine: GraphDataEngine,
 	app: App,
 	defaults: PluginSettings,
-): PluginSettings {
+	mode: ResolveViewSettingsMode = "bookmark",
+): ViewSettings {
 	const fromEngine = getEngineViewSettings(engine, defaults);
 	const payload = engine.__linkedNotesLastSetOptionsPayload;
 	const fromPayload =
@@ -123,6 +129,9 @@ export function resolveViewSettings(
 			? readViewSettingsFromOptions(graphBlob, defaults)
 			: null;
 
+	if (mode === "pane" && engine.__linkedNotesViewSettings) {
+		return fromEngine;
+	}
 	if (fromGraphPlugin) {
 		return fromGraphPlugin;
 	}
@@ -159,13 +168,13 @@ export function ensureSetOptionsCapture(
 export function getEngineViewSettings(
 	engine: GraphDataEngine,
 	defaults: PluginSettings,
-): PluginSettings {
+): ViewSettings {
 	return engine.__linkedNotesViewSettings ?? { ...defaults };
 }
 
 export function setEngineViewSettings(
 	engine: GraphDataEngine,
-	settings: PluginSettings,
+	settings: ViewSettings,
 ): void {
 	engine.__linkedNotesViewSettings = {
 		includeLinkedNotes: settings.includeLinkedNotes,
@@ -176,10 +185,7 @@ export function setEngineViewSettings(
 export function applyLinkedNotesOptionsBridge(
 	engine: GraphDataEngine,
 	getDefaults: () => PluginSettings,
-	onViewSettingsRestored?: (
-		next: PluginSettings,
-		prev: PluginSettings,
-	) => void,
+	onViewSettingsRestored?: (next: ViewSettings, prev: ViewSettings) => void,
 	debug?: FglnDebugSettings,
 ): void {
 	if (engine.__linkedNotesOptionsBridged) {
@@ -266,5 +272,6 @@ export function removeLinkedNotesOptionsBridge(engine: GraphDataEngine): void {
 	delete engine.__linkedNotesOptionsBridged;
 	delete engine.__linkedNotesViewSettings;
 	delete engine.__linkedNotesLastSetOptionsPayload;
+	delete engine.__linkedNotesSetOptionsSeq;
 	delete engine.__linkedNotesSetOptionsCaptureInstalled;
 }

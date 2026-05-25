@@ -2,9 +2,9 @@ import type { Plugin, WorkspaceLeaf } from "obsidian";
 import {
 	clampLinkDepth,
 	type PluginSettings,
+	type ViewSettings,
 } from "../settings";
 import {
-	type LinkedNotesControlState,
 	type LinkedNotesControlsSection,
 	mountLinkedNotesControls,
 	removeLinkedNotesControls,
@@ -19,6 +19,7 @@ import {
 	applyLinkedNotesOptionsBridge,
 	ensureSetOptionsCapture,
 	getEngineViewSettings,
+	type ResolveViewSettingsMode,
 	removeLinkedNotesOptionsBridge,
 	resolveViewSettings,
 	setEngineViewSettings,
@@ -36,8 +37,8 @@ import {
 import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
 
 const METADATA_REFRESH_DEBOUNCE_MS = 300;
-/** Delays after bind — bookmark setOptions can run after layout-change bind. */
-const POST_BIND_RECONCILE_DELAYS_MS = [0, 50, 150, 350];
+/** Bookmark setOptions may run after bind; re-read graph plugin store briefly. */
+const POST_BIND_RECONCILE_DELAYS_MS = [0, 100];
 
 interface GraphLeafBinding {
 	engine: GraphDataEngine;
@@ -45,7 +46,7 @@ interface GraphLeafBinding {
 }
 
 function settingsToPatchOptions(
-	settings: PluginSettings,
+	settings: ViewSettings,
 	engine: GraphDataEngine,
 ): LinkedNotesPatchOptions {
 	return {
@@ -81,7 +82,7 @@ export class GraphLinkedNotesManager {
 				}
 				this.captureGraphEngine(leaf.view.dataEngine, "active-leaf");
 				if (this.bindings.has(leaf)) {
-					this.reconcileLeafViewSettings(leaf, "active-leaf");
+					this.reconcileLeafViewSettings(leaf, "active-leaf", "pane");
 				} else {
 					void this.tryBindLeaf(leaf);
 				}
@@ -89,16 +90,12 @@ export class GraphLinkedNotesManager {
 		);
 	}
 
-	private debug(): PluginSettings {
-		return this.getDefaults();
-	}
-
 	private captureGraphEngine(
 		engine: GraphDataEngine,
 		source: string,
 	): void {
-		ensureSetOptionsCapture(engine, this.debug());
-		fglnDebugLog(this.debug(), `capture-install:${source}`, {
+		ensureSetOptionsCapture(engine, this.getDefaults());
+		fglnDebugLog(this.getDefaults(), `capture-install:${source}`, {
 			seq: engine.__linkedNotesSetOptionsSeq ?? 0,
 			bridged: !!engine.__linkedNotesOptionsBridged,
 		});
@@ -220,14 +217,22 @@ export class GraphLinkedNotesManager {
 					leaf,
 					(this.reconcileTimers.get(leaf) ?? []).filter((id) => id !== timerId),
 				);
-				this.reconcileLeafViewSettings(leaf, `post-bind+${delay}ms`);
+				this.reconcileLeafViewSettings(
+					leaf,
+					`post-bind+${delay}ms`,
+					"bookmark",
+				);
 			}, delay);
 			timers.push(timerId);
 		}
 		this.reconcileTimers.set(leaf, timers);
 	}
 
-	private reconcileLeafViewSettings(leaf: WorkspaceLeaf, source: string): void {
+	private reconcileLeafViewSettings(
+		leaf: WorkspaceLeaf,
+		source: string,
+		mode: ResolveViewSettingsMode,
+	): void {
 		if (this.destroyed) {
 			return;
 		}
@@ -244,9 +249,10 @@ export class GraphLinkedNotesManager {
 			engine,
 			this.plugin.app,
 			defaults,
+			mode,
 		);
 
-		fglnDebugLog(this.debug(), `reconcile:${source}`, {
+		fglnDebugLog(this.getDefaults(), `reconcile:${source}`, {
 			prev: summarizeViewSettings(prev),
 			next: summarizeViewSettings(next),
 			engine: summarizeViewSettings(
@@ -275,8 +281,8 @@ export class GraphLinkedNotesManager {
 
 	private applyViewSettingsToEngine(
 		engine: GraphDataEngine,
-		prev: PluginSettings,
-		next: PluginSettings,
+		prev: ViewSettings,
+		next: ViewSettings,
 		opts: { rerunSearch?: boolean; forceRender?: boolean } = {},
 	): void {
 		const turningOff =
@@ -285,7 +291,7 @@ export class GraphLinkedNotesManager {
 			!prev.includeLinkedNotes && next.includeLinkedNotes;
 
 		if (opts.forceRender || turningOff || turningOn || opts.rerunSearch) {
-			fglnDebugLog(this.debug(), "apply-view-settings", {
+			fglnDebugLog(this.getDefaults(), "apply-view-settings", {
 				prev: summarizeViewSettings(prev),
 				next: summarizeViewSettings(next),
 				turningOff,
@@ -338,8 +344,8 @@ export class GraphLinkedNotesManager {
 	private onViewSettingsRestored(
 		leaf: WorkspaceLeaf,
 		engine: GraphDataEngine,
-		next: PluginSettings,
-		prev: PluginSettings,
+		next: ViewSettings,
+		prev: ViewSettings,
 	): void {
 		const binding = this.bindings.get(leaf);
 		if (binding?.engine === engine) {
@@ -366,7 +372,7 @@ export class GraphLinkedNotesManager {
 			engine,
 			() => this.getDefaults(),
 			(next, prev) => this.onViewSettingsRestored(leaf, engine, next, prev),
-			this.debug(),
+			this.getDefaults(),
 		);
 	}
 
@@ -380,7 +386,7 @@ export class GraphLinkedNotesManager {
 			this.ensureOptionsBridge(leaf, preView.dataEngine);
 		}
 
-		fglnDebugLog(this.debug(), "tryBindLeaf:start", { attempt });
+		fglnDebugLog(this.getDefaults(), "tryBindLeaf:start", { attempt });
 
 		await leaf.loadIfDeferred();
 		if (this.destroyed) {
@@ -398,7 +404,9 @@ export class GraphLinkedNotesManager {
 		if (this.bindings.has(leaf)) return;
 
 		const engine = view.dataEngine;
-		this.ensureOptionsBridge(leaf, engine);
+		if (!engine.__linkedNotesOptionsBridged) {
+			this.ensureOptionsBridge(leaf, engine);
+		}
 
 		if (!engine.controlsEl?.isConnected) {
 			if (attempt < 10) {
@@ -412,10 +420,11 @@ export class GraphLinkedNotesManager {
 			engine,
 			this.plugin.app,
 			defaults,
+			"bookmark",
 		);
 		setEngineViewSettings(engine, viewSettings);
 
-		fglnDebugLog(this.debug(), "tryBindLeaf:mount", {
+		fglnDebugLog(this.getDefaults(), "tryBindLeaf:mount", {
 			attempt,
 			viewSettings: summarizeViewSettings(viewSettings),
 			payload: summarizeOptionsFgln(
@@ -467,7 +476,7 @@ export class GraphLinkedNotesManager {
 
 	private onControlsChanged(
 		sourceLeaf: WorkspaceLeaf,
-		state: LinkedNotesControlState,
+		state: ViewSettings,
 		rerunSearch = false,
 	): void {
 		if (this.destroyed) {
@@ -481,7 +490,7 @@ export class GraphLinkedNotesManager {
 
 		const engine = binding.engine;
 		const prev = getEngineViewSettings(engine, this.getDefaults());
-		const next: PluginSettings = {
+		const next: ViewSettings = {
 			includeLinkedNotes: state.includeLinkedNotes,
 			linkDepth: clampLinkDepth(state.linkDepth),
 		};
