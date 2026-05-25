@@ -12,6 +12,7 @@ import {
 	readViewSettingsFromOptions,
 	writeViewSettingsToOptions,
 } from "./readFromOptions";
+import { clearSearchSeedState } from "../searchSeeds";
 import { rememberSetOptionsPayload } from "./rememberPayload";
 
 function seedViewSettingsFromHistory(
@@ -76,11 +77,14 @@ export function applyLinkedNotesOptionsBridge(
 		this: GraphDataEngine,
 		options: Record<string, unknown>,
 	) {
+		let prev: ViewSettings | undefined;
+		let next: ViewSettings | undefined;
 		if (options) {
 			rememberSetOptionsPayload(this, options, debug, "bridge");
+			clearSearchSeedState(this);
 			const defaults = getDefaults();
-			const prev = getEngineViewSettings(this, defaults);
-			const next = readViewSettingsFromOptions(options, defaults);
+			prev = getEngineViewSettings(this, defaults);
+			next = readViewSettingsFromOptions(options, defaults);
 			setEngineViewSettings(this, next);
 			if (debug?.debugLogging) {
 				pluginDebugLog(debug, "setOptions-bridge", {
@@ -90,9 +94,12 @@ export function applyLinkedNotesOptionsBridge(
 					stored: summarizeStoredOptions(options),
 				});
 			}
+		}
+		const result = origSet.call(this, options);
+		if (prev !== undefined && next !== undefined) {
 			onViewSettingsRestored?.(next, prev);
 		}
-		return origSet.call(this, options);
+		return result;
 	};
 
 	if (!engine.__linkedNotesViewSettings) {

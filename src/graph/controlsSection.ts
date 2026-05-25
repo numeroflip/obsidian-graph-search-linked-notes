@@ -17,7 +17,6 @@ const PLUGIN_DEPTH_SLIDER = `${PLUGIN_BLOCK}__depth-slider`;
 const PLUGIN_DEPTH_OFF = `${PLUGIN_DEPTH}--off`;
 
 const PLUGIN_CONTROL_CLASSES = [PLUGIN_TOGGLE, PLUGIN_DEPTH].join(", ");
-const SEARCH_DEBOUNCE_MS = 300;
 
 function findFilterSettingsContainer(controlsEl: HTMLElement): HTMLElement | null {
 	return controlsEl.querySelector(
@@ -39,7 +38,6 @@ export class LinkedNotesControlsSection {
 	private searchInput: HTMLInputElement | null = null;
 	private searchClearBtn: HTMLElement | null = null;
 	private controlsObserver: MutationObserver | null = null;
-	private searchDebounceTimer: number | null = null;
 	private suppressEmit = false;
 	private readonly searchListeners: Array<{
 		el: HTMLElement;
@@ -109,11 +107,6 @@ export class LinkedNotesControlsSection {
 		this.controlsObserver?.disconnect();
 		this.controlsObserver = null;
 
-		if (this.searchDebounceTimer != null) {
-			window.clearTimeout(this.searchDebounceTimer);
-			this.searchDebounceTimer = null;
-		}
-
 		for (const { el, type, handler } of this.searchListeners) {
 			el.removeEventListener(type, handler);
 		}
@@ -158,13 +151,6 @@ export class LinkedNotesControlsSection {
 
 		const handler = () => {
 			this.syncDisabled();
-			if (this.searchDebounceTimer != null) {
-				window.clearTimeout(this.searchDebounceTimer);
-			}
-			this.searchDebounceTimer = window.setTimeout(() => {
-				this.searchDebounceTimer = null;
-				this.emitChange(true);
-			}, SEARCH_DEBOUNCE_MS);
 		};
 
 		for (const type of ["input", "change"] as const) {
@@ -174,14 +160,7 @@ export class LinkedNotesControlsSection {
 
 		if (this.searchClearBtn) {
 			const clearHandler = () => {
-				if (this.searchDebounceTimer != null) {
-					window.clearTimeout(this.searchDebounceTimer);
-					this.searchDebounceTimer = null;
-				}
-				window.setTimeout(() => {
-					this.syncDisabled();
-					this.emitChange(true);
-				}, 0);
+				this.syncDisabled();
 			};
 			this.searchClearBtn.addEventListener("click", clearHandler);
 			this.searchListeners.push({
