@@ -6,7 +6,8 @@ import {
 	type ViewSettings,
 } from "../settings";
 import type { GraphDataEngine } from "./types";
-import { getGraphSearchInput, hasActiveGraphSearch } from "./utils";
+import { getGraphSearchInput } from "./searchInput";
+import { hasActiveGraphSearch } from "./searchState";
 
 /** BEM class names — block: fgln (filtered graph linked notes) */
 const FGLN_BLOCK = "fgln";

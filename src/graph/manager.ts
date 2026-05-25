@@ -8,32 +8,24 @@ import {
 	type LinkedNotesControlsSection,
 	mountLinkedNotesControls,
 	removeLinkedNotesControls,
-} from "./controls-section";
+} from "./controlsSection";
+import { getGraphPluginOptionsBlob } from "./debug/graphPluginOptions";
+import { fglnDebugLog } from "./debug/log";
+import { summarizeOptionsFgln, summarizeViewSettings } from "./debug/summarize";
+import { clearExpansionCache } from "./expansion";
+import { pruneLinkedExpansions } from "./fileFilter";
+import { findGraphLeaves, isGraphView } from "./leaves";
+import { applyLinkedNotesOptionsBridge } from "./options/applyBridge";
+import { ensureSetOptionsCapture } from "./options/captureSetOptions";
+import { getEngineViewSettings, setEngineViewSettings } from "./options/engineSettings";
+import { removeLinkedNotesOptionsBridge } from "./options/removeBridge";
 import {
-	fglnDebugLog,
-	getGraphPluginOptionsBlob,
-	summarizeOptionsFgln,
-	summarizeViewSettings,
-} from "./debug";
-import {
-	applyLinkedNotesOptionsBridge,
-	ensureSetOptionsCapture,
-	getEngineViewSettings,
 	type ResolveViewSettingsMode,
-	removeLinkedNotesOptionsBridge,
 	resolveViewSettings,
-	setEngineViewSettings,
-} from "./options-bridge";
+} from "./options/resolveSettings";
 import { applyLinkedNotesPatch, removeLinkedNotesPatch } from "./patch";
-import {
-	clearExpansionCache,
-	clearSearchSeedCache,
-	findGraphLeaves,
-	hasActiveGraphSearch,
-	isGraphView,
-	isSearchScanPending,
-	pruneLinkedExpansions,
-} from "./utils";
+import { clearSearchSeedCache } from "./searchSeeds";
+import { hasActiveGraphSearch, isSearchScanPending } from "./searchState";
 import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
 
 const METADATA_REFRESH_DEBOUNCE_MS = 300;

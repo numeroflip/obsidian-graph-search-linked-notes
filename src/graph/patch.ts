@@ -1,14 +1,12 @@
 import type { Plugin } from "obsidian";
-import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
+import { clearExpansionCache, getCachedExpansion } from "./expansion";
 import {
-	clearSearchSeedCache,
-	getCachedExpansion,
-	hasActiveGraphSearch,
-	isSearchScanPending,
 	mergeExpandedIntoFileFilter,
 	pruneLinkedExpansions,
-	refreshSearchSeedCache,
-} from "./utils";
+} from "./fileFilter";
+import { clearSearchSeedCache, refreshSearchSeedCache } from "./searchSeeds";
+import { hasActiveGraphSearch, isSearchScanPending } from "./searchState";
+import type { GraphDataEngine, LinkedNotesPatchOptions } from "./types";
 
 export function applyLinkedNotesPatch(
 	plugin: Plugin,
@@ -34,7 +32,6 @@ export function applyLinkedNotesPatch(
 			return origRender();
 		}
 
-		// setQuery fills fileFilter asynchronously; skip until the scan finishes.
 		if (isSearchScanPending(this)) {
 			return origRender();
 		}
